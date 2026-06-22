@@ -1,0 +1,761 @@
+{
+  "info": {
+    "_postman_id": "98759362-7724-4ee8-93bb-5d267faeac24",
+    "name": "Creator Card Microservice",
+    "description": "Repeatable assessment collection for the Creator Card Microservice. Run requests in collection order. The first request creates a unique run_id and later requests reuse captured slugs.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "if (!pm.collectionVariables.get('run_id')) {",
+          "  pm.collectionVariables.set('run_id', Date.now().toString());",
+          "}"
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "run_id",
+      "value": ""
+    },
+    {
+      "key": "public_slug",
+      "value": ""
+    },
+    {
+      "key": "generated_slug",
+      "value": ""
+    },
+    {
+      "key": "private_slug",
+      "value": ""
+    },
+    {
+      "key": "draft_slug",
+      "value": ""
+    },
+    {
+      "key": "deleted_slug",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "Valid assessment cases",
+      "item": [
+        {
+          "name": "01 - Full public card creation",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set('run_id', Date.now().toString());",
+                  "pm.collectionVariables.unset('public_slug');",
+                  "pm.collectionVariables.unset('generated_slug');",
+                  "pm.collectionVariables.unset('private_slug');",
+                  "pm.collectionVariables.unset('draft_slug');",
+                  "pm.collectionVariables.unset('deleted_slug');"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('Create success envelope', () => {",
+                  "  pm.expect(body.status).to.eql('success');",
+                  "  pm.expect(body.message).to.eql('Creator Card Created Successfully.');",
+                  "});",
+                  "pm.test('Exposes id and never _id', () => {",
+                  "  pm.expect(body.data.id).to.be.a('string');",
+                  "  pm.expect(body.data).not.to.have.property('_id');",
+                  "});",
+                  "pm.test('Defaults to public and includes null access_code', () => {",
+                  "  pm.expect(body.data.access_type).to.eql('public');",
+                  "  pm.expect(body.data.access_code).to.eql(null);",
+                  "});",
+                  "pm.collectionVariables.set('public_slug', body.data.slug);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"George Cooks {{run_id}}\",\n  \"description\": \"Weekly cooking podcast\",\n  \"slug\": \"george-cooks-{{run_id}}\",\n  \"creator_reference\": \"crt_8f2k1m9x4p7w3q5z\",\n  \"links\": [\n    {\n      \"title\": \"YouTube\",\n      \"url\": \"https://youtube.com/@georgecooks\"\n    }\n  ],\n  \"service_rates\": {\n    \"currency\": \"NGN\",\n    \"rates\": [\n      {\n        \"name\": \"IG Story Post\",\n        \"description\": \"One story mention\",\n        \"amount\": 5000000\n      }\n    ]\n  },\n  \"status\": \"published\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/creator-cards",
+              "host": ["{{base_url}}"],
+              "path": ["creator-cards"]
+            },
+            "description": "Creates a complete published public card and stores its slug for later requests."
+          }
+        },
+        {
+          "name": "02 - Automatic slug generation",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "const expectedSlug = `ada-designs-${pm.collectionVariables.get('run_id')}`;",
+                  "pm.test('Slug is generated from title', () => pm.expect(body.data.slug).to.eql(expectedSlug));",
+                  "pm.collectionVariables.set('generated_slug', body.data.slug);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Ada Designs {{run_id}}\",\n  \"creator_reference\": \"crt_a1b2c3d4e5f6g7h8\",\n  \"status\": \"published\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/creator-cards",
+              "host": ["{{base_url}}"],
+              "path": ["creator-cards"]
+            }
+          }
+        },
+        {
+          "name": "03 - Private card creation",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('Private create response includes access_code', () => {",
+                  "  pm.expect(body.data.access_type).to.eql('private');",
+                  "  pm.expect(body.data.access_code).to.eql('A1B2C3');",
+                  "});",
+                  "pm.collectionVariables.set('private_slug', body.data.slug);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"VIP Rate Card {{run_id}}\",\n  \"slug\": \"vip-rate-{{run_id}}\",\n  \"creator_reference\": \"crt_x9y8z7w6v5u4t3s2\",\n  \"status\": \"published\",\n  \"access_type\": \"private\",\n  \"access_code\": \"A1B2C3\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/creator-cards",
+              "host": ["{{base_url}}"],
+              "path": ["creator-cards"]
+            }
+          }
+        },
+        {
+          "name": "04 - Retrieve public published card",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('Retrieve success envelope', () => {",
+                  "  pm.expect(body.status).to.eql('success');",
+                  "  pm.expect(body.message).to.eql('Creator Card Retrieved Successfully.');",
+                  "});",
+                  "pm.test('GET never leaks protected fields', () => {",
+                  "  pm.expect(body.data.id).to.be.a('string');",
+                  "  pm.expect(body.data).not.to.have.property('_id');",
+                  "  pm.expect(body.data).not.to.have.property('access_code');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/creator-cards/{{public_slug}}",
+              "host": ["{{base_url}}"],
+              "path": ["creator-cards", "{{public_slug}}"]
+            }
+          }
+        },
+        {
+          "name": "05 - Retrieve private card with correct code",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('Correct code returns card without access_code', () => {",
+                  "  pm.expect(body.data.access_type).to.eql('private');",
+                  "  pm.expect(body.data).not.to.have.property('access_code');",
+                  "  pm.expect(body.data).not.to.have.property('_id');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/creator-cards/{{private_slug}}?access_code=A1B2C3",
+              "host": ["{{base_url}}"],
+              "path": ["creator-cards", "{{private_slug}}"],
+              "query": [
+                {
+                  "key": "access_code",
+                  "value": "A1B2C3"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "06 - Delete generated card",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('Delete returns soft-deleted card', () => {",
+                  "  pm.expect(body.message).to.eql('Creator Card Deleted Successfully.');",
+                  "  pm.expect(body.data.deleted).to.be.a('number');",
+                  "  pm.expect(body.data).not.to.have.property('_id');",
+                  "});",
+                  "pm.collectionVariables.set('deleted_slug', body.data.slug);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"creator_reference\": \"crt_a1b2c3d4e5f6g7h8\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/creator-cards/{{generated_slug}}",
+              "host": ["{{base_url}}"],
+              "path": ["creator-cards", "{{generated_slug}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Invalid assessment cases",
+      "item": [
+        {
+          "name": "07 - Duplicate explicit slug - SL02",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
+                  "const body = pm.response.json();",
+                  "pm.test('Returns SL02', () => {",
+                  "  pm.expect(body.status).to.eql('error');",
+                  "  pm.expect(body.code).to.eql('SL02');",
+                  "  pm.expect(body.message).to.eql('Slug is already taken');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Another George\",\n  \"slug\": \"{{public_slug}}\",\n  \"creator_reference\": \"crt_m1n2b3v4c5x6z7l8\",\n  \"status\": \"published\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/creator-cards",
+              "host": ["{{base_url}}"],
+              "path": ["creator-cards"]
+            }
+          }
+        },
+        {
+          "name": "08 - Private card without access code - AC01",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
+                  "const body = pm.response.json();",
+                  "pm.test('Returns AC01', () => {",
+                  "  pm.expect(body.code).to.eql('AC01');",
+                  "  pm.expect(body.message).to.eql('access_code is required when access_type is private');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Secret Card {{run_id}}\",\n  \"creator_reference\": \"crt_q1w2e3r4t5y6u7i8\",\n  \"status\": \"published\",\n  \"access_type\": \"private\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/creator-cards",
+              "host": ["{{base_url}}"],
+              "path": ["creator-cards"]
+            }
+          }
+        },
+        {
+          "name": "09 - Public card with access code - AC05",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
+                  "const body = pm.response.json();",
+                  "pm.test('Returns AC05', () => {",
+                  "  pm.expect(body.code).to.eql('AC05');",
+                  "  pm.expect(body.message).to.eql('access_code can only be set on private cards');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Public Card {{run_id}}\",\n  \"creator_reference\": \"crt_q1w2e3r4t5y6u7i8\",\n  \"status\": \"published\",\n  \"access_type\": \"public\",\n  \"access_code\": \"A1B2C3\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/creator-cards",
+              "host": ["{{base_url}}"],
+              "path": ["creator-cards"]
+            }
+          }
+        },
+        {
+          "name": "10 - Invalid status - VSL HTTP 400",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
+                  "const body = pm.response.json();",
+                  "pm.test('Returns validator error', () => {",
+                  "  pm.expect(body.status).to.eql('error');",
+                  "  pm.expect(body.code).to.eql('SPCL_VALIDATION');",
+                  "  pm.expect(body.message).to.be.a('string').and.not.empty;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Bad Status Card\",\n  \"creator_reference\": \"crt_q1w2e3r4t5y6u7i8\",\n  \"status\": \"archived\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/creator-cards",
+              "host": ["{{base_url}}"],
+              "path": ["creator-cards"]
+            }
+          }
+        },
+        {
+          "name": "11 - Retrieve missing card - NF01",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 404', () => pm.response.to.have.status(404));",
+                  "const body = pm.response.json();",
+                  "pm.test('Returns NF01', () => pm.expect(body.code).to.eql('NF01'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/creator-cards/does-not-exist-{{run_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["creator-cards", "does-not-exist-{{run_id}}"]
+            }
+          }
+        },
+        {
+          "name": "12a - Create draft fixture",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.collectionVariables.set('draft_slug', body.data.slug);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Draft Card {{run_id}}\",\n  \"slug\": \"draft-card-{{run_id}}\",\n  \"creator_reference\": \"crt_d1r2a3f4t5c6a7r8\",\n  \"status\": \"draft\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/creator-cards",
+              "host": ["{{base_url}}"],
+              "path": ["creator-cards"]
+            }
+          }
+        },
+        {
+          "name": "12b - Retrieve draft card - NF02",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 404', () => pm.response.to.have.status(404));",
+                  "const body = pm.response.json();",
+                  "pm.test('Returns NF02', () => pm.expect(body.code).to.eql('NF02'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/creator-cards/{{draft_slug}}",
+              "host": ["{{base_url}}"],
+              "path": ["creator-cards", "{{draft_slug}}"]
+            }
+          }
+        },
+        {
+          "name": "13 - Private card without code - AC03",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 403', () => pm.response.to.have.status(403));",
+                  "const body = pm.response.json();",
+                  "pm.test('Returns AC03', () => pm.expect(body.code).to.eql('AC03'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/creator-cards/{{private_slug}}",
+              "host": ["{{base_url}}"],
+              "path": ["creator-cards", "{{private_slug}}"]
+            }
+          }
+        },
+        {
+          "name": "14 - Private card with wrong code - AC04",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 403', () => pm.response.to.have.status(403));",
+                  "const body = pm.response.json();",
+                  "pm.test('Returns AC04', () => pm.expect(body.code).to.eql('AC04'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/creator-cards/{{private_slug}}?access_code=WRONG1",
+              "host": ["{{base_url}}"],
+              "path": ["creator-cards", "{{private_slug}}"],
+              "query": [
+                {
+                  "key": "access_code",
+                  "value": "WRONG1"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "15 - Delete missing card - NF01",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 404', () => pm.response.to.have.status(404));",
+                  "const body = pm.response.json();",
+                  "pm.test('Returns NF01', () => pm.expect(body.code).to.eql('NF01'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"creator_reference\": \"crt_q1w2e3r4t5y6u7i8\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/creator-cards/does-not-exist-{{run_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["creator-cards", "does-not-exist-{{run_id}}"]
+            }
+          }
+        },
+        {
+          "name": "16 - Retrieve deleted card - NF01",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 404', () => pm.response.to.have.status(404));",
+                  "const body = pm.response.json();",
+                  "pm.test('Returns NF01 after deletion', () => pm.expect(body.code).to.eql('NF01'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/creator-cards/{{deleted_slug}}",
+              "host": ["{{base_url}}"],
+              "path": ["creator-cards", "{{deleted_slug}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Additional robustness checks",
+      "item": [
+        {
+          "name": "Malformed JSON - HTTP 400",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
+                  "const body = pm.response.json();",
+                  "pm.test('Malformed JSON returns safe error envelope', () => {",
+                  "  pm.expect(body.status).to.eql('error');",
+                  "  pm.expect(body.code).to.eql('ERR');",
+                  "  pm.expect(body.message).to.be.a('string').and.not.empty;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"title\":"
+            },
+            "url": {
+              "raw": "{{base_url}}/creator-cards",
+              "host": ["{{base_url}}"],
+              "path": ["creator-cards"]
+            }
+          }
+        },
+        {
+          "name": "Invalid nested URL - HTTP 400",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
+                  "const body = pm.response.json();",
+                  "pm.test('Nested URL uses VSL validation', () => pm.expect(body.code).to.eql('SPCL_VALIDATION'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Invalid Link Card\",\n  \"creator_reference\": \"crt_q1w2e3r4t5y6u7i8\",\n  \"links\": [\n    {\n      \"title\": \"Invalid\",\n      \"url\": \"ftp://example.com\"\n    }\n  ],\n  \"status\": \"published\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/creator-cards",
+              "host": ["{{base_url}}"],
+              "path": ["creator-cards"]
+            }
+          }
+        },
+        {
+          "name": "Decimal service amount - HTTP 400",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 400', () => pm.response.to.have.status(400));",
+                  "const body = pm.response.json();",
+                  "pm.test('Amount must be an integer', () => pm.expect(body.code).to.eql('SPCL_VALIDATION'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Invalid Rate Card\",\n  \"creator_reference\": \"crt_q1w2e3r4t5y6u7i8\",\n  \"service_rates\": {\n    \"currency\": \"USD\",\n    \"rates\": [\n      {\n        \"name\": \"Consulting\",\n        \"description\": \"One call\",\n        \"amount\": 1.5\n      }\n    ]\n  },\n  \"status\": \"published\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/creator-cards",
+              "host": ["{{base_url}}"],
+              "path": ["creator-cards"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
