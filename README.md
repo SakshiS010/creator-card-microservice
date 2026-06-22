@@ -372,6 +372,7 @@ docs/                         Design and development notes
 - [Design decisions](docs/design-decisions.md)
 - [AI-assisted development and verification](docs/ai-assisted-development.md)
 - [Postman collection and environments](postman/README.md)
+- [Live acceptance report](docs/live-acceptance-report.md)
 
 ## Deployment Contract
 
