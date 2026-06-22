@@ -8,6 +8,8 @@ rates, draft/published visibility, optional private access, and soft deletion.
 This implementation follows the supplied Resilience17 Node.js template and keeps the required
 endpoints at the root of the base URL—there is no `/api` or `/v1` prefix.
 
+**Live API:** [https://creator-card-microservice-nj95.onrender.com](https://creator-card-microservice-nj95.onrender.com)
+
 ## Features
 
 - Create public or private creator cards.
@@ -377,7 +379,7 @@ For assessment submission, deploy the service with a persistent MongoDB database
 the base URL:
 
 ```text
-https://your-service.example.com
+https://creator-card-microservice-nj95.onrender.com
 ```
 
 Do not submit `/creator-cards`, `/api`, `/v1`, or any other path suffix.

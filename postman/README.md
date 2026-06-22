@@ -10,8 +10,11 @@ Import these files into Postman:
 
 Select **Creator Card - Local** while the API is running on `http://localhost:8811`.
 
-Before testing the deployed API, edit `base_url` in **Creator Card - Deployed** and replace the
-placeholder with the Render base URL. Do not add `/creator-cards` or a trailing endpoint path.
+Select **Creator Card - Deployed** to test the live Render service. Its `base_url` is:
+
+```text
+https://creator-card-microservice-nj95.onrender.com
+```
 
 ## Run order
 
