@@ -264,6 +264,48 @@ function isemail(value, arg, isNot, prop) {
   };
 }
 
+function createPatternConstraint(pattern, message) {
+  return function patternConstraint(value, _, isNot, prop) {
+    if (Array.isArray(value)) {
+      return processArray(patternConstraint, value, [], prop);
+    }
+
+    let isSatisfied = pattern.test(value);
+    if (isNot) {
+      isSatisfied = !isSatisfied;
+    }
+
+    return {
+      evaluatedValue: value,
+      isSatisfied,
+      errorMessage: `Passed ${prop} value ${value} ${message}`,
+    };
+  };
+}
+
+const isslug = createPatternConstraint(
+  /^[a-zA-Z0-9_-]+$/,
+  'must contain only letters, numbers, hyphens, and underscores'
+);
+const isalphanumeric = createPatternConstraint(
+  /^[a-zA-Z0-9]+$/,
+  'must contain only letters and numbers'
+);
+const ishttpurl = createPatternConstraint(/^https?:\/\/.+/i, 'must start with http:// or https://');
+
+function integer(value, _, isNot, prop) {
+  let isSatisfied = Number.isInteger(value);
+  if (isNot) {
+    isSatisfied = !isSatisfied;
+  }
+
+  return {
+    evaluatedValue: value,
+    isSatisfied,
+    errorMessage: `Passed ${prop} value ${value} must be an integer`,
+  };
+}
+
 module.exports = {
   min,
   max,
@@ -280,4 +322,8 @@ module.exports = {
   uppercase,
   timestamptohex,
   isemail,
+  isslug,
+  isalphanumeric,
+  ishttpurl,
+  integer,
 };

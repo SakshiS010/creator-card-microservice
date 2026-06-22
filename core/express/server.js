@@ -4,6 +4,19 @@
 /* eslint-disable no-continue */
 /* eslint-disable no-restricted-syntax */
 const expressEnums = require('./enums');
+
+function handleJsonParseError(err, req, res, next) {
+  if (err instanceof SyntaxError && err.status === 400 && 'body' in err) {
+    res.status(400).json({
+      status: 'error',
+      code: 'ERR',
+      message: 'Error encountered in parsing request payload. Please check payload and try again',
+    });
+  } else {
+    next();
+  }
+}
+
 /**
  * @typedef {Object} ExpressServerConfig
  * @property {number} [port] - Optional parameter that defines the port the express server should listen on.
@@ -66,17 +79,7 @@ function Server(serverConfig = {}) {
   }
 
   // Todo: pass in directories that we can set as public paths to use in express app.static whatever
-  app.use(express.json({ limit: JSONLimit }), (err, req, res, next) => {
-    if (err instanceof SyntaxError && err.status === 400 && 'body' in err) {
-      res.status(400).json({
-        code: 'ERR',
-        error: true,
-        message: 'Error encountered in parsing request payload. Please check payload and try again',
-      });
-    } else {
-      next();
-    }
-  });
+  app.use(express.json({ limit: JSONLimit }), handleJsonParseError);
 
   const handlerHelpers = {};
   handlerHelpers.http_statuses = expressEnums.HTTPStatusCode;
@@ -246,6 +249,7 @@ function Server(serverConfig = {}) {
         responseComponents.body.message = error.isApplicationError
           ? error.message
           : 'Some error occured.';
+        responseComponents.body.code = error.isApplicationError ? error.errorCode : 'ERR';
         responseComponents.body.errors = error.details || undefined;
         responseComponents.body.data = error.context;
 
@@ -274,13 +278,15 @@ function Server(serverConfig = {}) {
   }
 
   function startServer() {
-    app.use((_, res, __) => {
+    app.use((_, res) => {
       // Global 404 Catcher
       res.status(404).json({
         status: 'error',
         message: 'Resource not found.',
       });
     });
+    // Express identifies error middleware by its four-argument signature.
+    // eslint-disable-next-line no-unused-vars
     app.use((err, _, res, __) => {
       appLogger.errorX(err, 'global-500-error');
       // Global 500 Catcher
@@ -301,3 +307,4 @@ function Server(serverConfig = {}) {
   };
 }
 module.exports = Server;
+module.exports.handleJsonParseError = handleJsonParseError;

@@ -5,15 +5,12 @@ if (!process.env.__ALREADY_BOOTSTRAPPED_ENVS) require('dotenv').config();
 const fs = require('fs');
 const { createServer } = require('@app-core/server');
 const { createConnection } = require('@app-core/mongoose');
-const { createQueue } = require('@app-core/queue');
 
 const canLogEndpointInformation = process.env.CAN_LOG_ENDPOINT_INFORMATION;
 
 createConnection({
   uri: process.env.MONGODB_URI,
 });
-
-createQueue();
 
 const server = createServer({
   port: process.env.PORT,
@@ -23,7 +20,7 @@ const server = createServer({
 
 const ENDPOINT_CONFIGS = [
   {
-    path: './endpoints/onboarding/',
+    path: './endpoints/creator-card/',
   },
 ];
 

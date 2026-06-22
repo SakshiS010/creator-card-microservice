@@ -4,4 +4,5 @@ const createServer = require('./server');
 module.exports = {
   createHandler,
   createServer,
+  handleJsonParseError: createServer.handleJsonParseError,
 };
